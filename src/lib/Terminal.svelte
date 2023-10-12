@@ -1,12 +1,16 @@
 <script lang="ts">
 	import Typewriter from 'svelte-typewriter';
 	import { history } from '$stores/history';
+	import { HELP_COMMAND, CLEAR_COMMAND, type Command } from '$data/commands';
 
+	export let welcome = '';
 	export let host = '';
+	export let commands: Command[];
 
 	let input: HTMLInputElement;
-	let isTyping = true;
 	let historyIndex = $history.length;
+	let isTyping = true;
+	let output: string[] = [];
 
 	function focus(element: HTMLElement) {
 		element?.focus();
@@ -21,16 +25,38 @@
 
 	function handleSubmit(e: SubmitEvent) {
 		const formData = new FormData(e.target as HTMLFormElement);
-		const command = formData.get('command')?.toString();
+		const prompt = formData.get('command')?.toString();
 
-		if (!command || /^[ ]+$/.test(command) || $history[$history.length - 1] === command) {
+		if (!prompt || /^[ ]+$/.test(prompt)) {
 			return;
 		}
 
-		$history[$history.length] = command;
-		historyIndex = $history.length;
+		if ($history[$history.length - 1] !== prompt) {
+			$history[$history.length] = prompt;
+			historyIndex = $history.length;
+		}
 
-		console.log(command);
+		const promptParts = prompt.split(' ');
+		const commandPart = promptParts[0];
+		const args = promptParts.slice(1);
+
+		const command = allCommands.find(
+			(command) =>
+				command.command === commandPart || command.aliases?.some((alias) => alias === commandPart)
+		);
+
+		if (command?.execute) {
+			if (args?.length === (command.arguments?.length || 0)) {
+				print(prompt, 'success');
+				command.execute(...args);
+			} else {
+				print(prompt, 'error');
+				print(`usage: ${prompt} ${command.arguments?.map((arg) => `[${arg}]`).join(' ')})`);
+			}
+		} else {
+			print(prompt, 'error');
+			print('command not found');
+		}
 	}
 
 	function handleKeyUp(e: KeyboardEvent) {
@@ -57,7 +83,47 @@
 		}
 	}
 
+	function print(text: string, type?: 'error' | 'success') {
+		let textClass = '';
+		if (type === 'error') {
+			textClass = 'text-red-500';
+		} else if (type === 'success') {
+			textClass = 'text-green-500';
+		}
+
+		output = [...output, `<p class="flex-1 whitespace-pre ${textClass}">${text}</p>`];
+	}
+
+	const internalCommands: Command[] = [
+		{
+			...HELP_COMMAND,
+			execute: () => {
+				print('Available commands:');
+				print(
+					allCommands
+						.map((command) => {
+							let line = ` ${command.command}`;
+							if (command.aliases) {
+								line += ` <span class="text-gray-400">${command.aliases.join(',')}</span>`;
+							}
+							line = line.padEnd(55, ' ');
+							line += ` - ${command.description}`;
+							return line;
+						})
+						.join('<br />')
+				);
+			}
+		},
+		{
+			...CLEAR_COMMAND,
+			execute: () => {
+				output = [];
+			}
+		}
+	];
+
 	$: prompt = host.length ? `${host}:~$` : '$';
+	$: allCommands = [...internalCommands, ...commands];
 </script>
 
 <div class="w-full">
@@ -76,9 +142,17 @@
 		<!-- Intro Text -->
 		<Typewriter mode="cascade" on:done={handleDoneWriting}>
 			<div class="flex flex-col">
-				<p class="flex-1 items-center">Welcome to Svelterminal!</p>
+				{#if welcome}
+					<p class="flex-1 items-center">{welcome}</p>
+				{/if}
+				<p class="flex-1 items-center">Type 'help' to show a list of all commands</p>
 			</div>
 		</Typewriter>
+
+		<!-- Output -->
+		{#each output as block}
+			{@html block}
+		{/each}
 
 		<!-- Prompt -->
 		<form class="flex space-x-2" on:submit|preventDefault={handleSubmit}>
