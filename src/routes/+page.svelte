@@ -5,6 +5,8 @@
 	const commands: Command[] = [];
 </script>
 
-<div class="grid p-16">
-	<Terminal {commands} welcome="Welcome to Svelterminal!" />
+<div class="flex flex-col items-center p-16">
+	<div class="w-1/2">
+		<Terminal {commands} welcome="Welcome to Svelterminal!" heightClass="h-72" />
+	</div>
 </div>

@@ -1,11 +1,12 @@
 <script lang="ts">
 	import Typewriter from 'svelte-typewriter';
 	import { history } from '$stores/history';
-	import { HELP_COMMAND, CLEAR_COMMAND, type Command } from '$data/commands';
+	import { HELP_COMMAND, CLEAR_COMMAND, ABOUT_COMMAND, type Command } from '$data/commands';
 
 	export let welcome = '';
 	export let host = '';
-	export let commands: Command[];
+	export let heightClass = '';
+	export let commands: Command[] = [];
 
 	let input: HTMLInputElement;
 	let historyIndex = $history.length;
@@ -60,6 +61,8 @@
 	}
 
 	function handleKeyUp(e: KeyboardEvent) {
+		input.scrollIntoView({ behavior: 'smooth', block: 'end' });
+
 		switch (e.code) {
 			case 'Enter':
 				e.preventDefault();
@@ -91,7 +94,7 @@
 			textClass = 'text-green-500';
 		}
 
-		output = [...output, `<p class="flex-1 whitespace-pre ${textClass}">${text}</p>`];
+		output = [...output, `<p class="whitespace-pre ${textClass}">${text}</p>`];
 	}
 
 	const internalCommands: Command[] = [
@@ -119,6 +122,28 @@
 			execute: () => {
 				output = [];
 			}
+		},
+		{
+			...ABOUT_COMMAND,
+			execute: () => {
+				input.value = '';
+				const asciiLogo = `
+░░░░░░░░░░░░░░░░░░░░░░░░░
+░░░░░▒▓▓▓▓▓▓▓░░▓▓▒░▒░░░░░
+░░░░▒▓▓▓▓▓▓▓░░▓▓░░▓▓▓░░░░
+░░░▓▓▓▓▓▓▓▓░░▓▓░░▓▓▓▓▓▒░░
+░░▓▓▓▓▓▓▓▒░▒▓▓░░▓▓▓▓▓▓▓▒░
+░▓▓▓▓▓▓▓▒░▒▓▓░░▓▓▓▓▓▓▓▓▓▒
+▒▓▓▓▓▓▓▒░▓▓▒░░░░░░░░░░░░░
+░▒▓▓▓▓░░▓▓▒░▒▒░▓▓▓▓▓▓▓▓▓░
+░░▒▓▓░░▓▓░░▓▓▓▒░▒▓▓▓▓▓▓░░
+░░░░░░▓▓░░▓▓▓▓▓▒░▒▓▓▓▓░░░
+░░░░░▓▓░░▓▓▓▓▓▓▓▓░▒▓▒░░░░
+░░░░░░░░▓▓▓▓▓▓▓▓▓▒░░░░░░░
+`;
+				print(asciiLogo);
+				window.open('https://shipbit.de', '_blank');
+			}
 		}
 	];
 
@@ -126,55 +151,76 @@
 	$: allCommands = [...internalCommands, ...commands];
 </script>
 
-<div class="w-full">
-	<!-- Window -->
-	<div
-		class="flex flex-col space-y-4 px-5 pt-4 pb-6 text-gray-100 text-sm font-mono subpixel-antialiased
-                bg-gray-800 rounded-lg leading-normal shadow-lg overflow-hidden"
-	>
-		<!-- Window Toolbar (Apple Buttons) -->
-		<!-- <div class="flex space-x-2">
+<div
+	class="flex flex-col space-y-2 px-5 pt-4 pb-6 text-gray-100 text-sm font-mono subpixel-antialiased
+           w-full bg-gray-800 rounded-lg leading-normal shadow-lg overflow-y-auto {heightClass}"
+>
+	<!-- Window Toolbar (Apple Buttons) -->
+	<!-- <div class="flex space-x-2">
 			<div class="h-3 w-3 bg-red-500 rounded-full" />
 			<div class="h-3 w-3 bg-orange-300 rounded-full" />
 			<div class="h-3 w-3 bg-green-500 rounded-full" />
 		</div> -->
 
-		<!-- Intro Text -->
-		<Typewriter mode="cascade" on:done={handleDoneWriting}>
-			<div class="flex flex-col">
-				{#if welcome}
-					<p class="flex-1 items-center">{welcome}</p>
-				{/if}
-				<p class="flex-1 items-center">Type 'help' to show a list of all commands</p>
-			</div>
-		</Typewriter>
+	<!-- Intro Text -->
+	<Typewriter mode="cascade" on:done={handleDoneWriting} interval={10}>
+		<div class="flex flex-col">
+			{#if welcome}
+				<p class="items-center">{welcome}</p>
+			{/if}
+			<p class="items-center">Type 'help' to show a list of all commands</p>
+		</div>
+	</Typewriter>
 
-		<!-- Output -->
-		{#each output as block}
-			{@html block}
-		{/each}
+	<!-- Output -->
+	{#each output as block}
+		{@html block}
+	{/each}
 
-		<!-- Prompt -->
-		<form class="flex space-x-2" on:submit|preventDefault={handleSubmit}>
-			<!-- Host -->
-			<span class="text-green-400">{prompt}</span>
+	<!-- Prompt -->
+	<form class="flex space-x-2" on:submit|preventDefault={handleSubmit}>
+		<!-- Host -->
+		<span class="text-green-400">{prompt}</span>
 
-			<!-- Input -->
-			<input
-				class="flex-1 bg-transparent outline-none caret-green-400 care"
-				type="text"
-				name="command"
-				disabled={isTyping}
-				bind:this={input}
-				use:focus
-				on:keyup|preventDefault={handleKeyUp}
-			/>
-		</form>
-	</div>
+		<!-- Input -->
+		<input
+			class="bg-transparent outline-none caret-green-400 care"
+			type="text"
+			name="command"
+			disabled={isTyping}
+			bind:this={input}
+			use:focus
+			on:keyup|preventDefault={handleKeyUp}
+		/>
+	</form>
 </div>
 
 <style>
 	:root {
 		--cursor-color: #fff;
+		--scrollbar-background: theme(colors.gray.700);
+		--scrollbar-foreground: theme(colors.gray.500);
+	}
+
+	/* Firefox */
+	* {
+		scrollbar-width: thin;
+		scrollbar-color: var(--scrollbar-foreground) var(--scrollbar-background);
+	}
+
+	/* Chrome, Edge, and Safari */
+	*::-webkit-scrollbar {
+		width: 15px;
+	}
+
+	*::-webkit-scrollbar-track {
+		background: var(--scrollbar-background);
+		border-radius: 5px;
+	}
+
+	*::-webkit-scrollbar-thumb {
+		background-color: var(--scrollbar-foreground);
+		border-radius: 14px;
+		border: 3px solid var(--scrollbar-background);
 	}
 </style>

@@ -24,3 +24,9 @@ export const CLEAR_COMMAND: Command = {
 	description: 'Clear the terminal',
 	aliases: ['c', 'clr', 'cls']
 };
+
+export const ABOUT_COMMAND: Command = {
+	command: 'about',
+	description: 'Meet my maker',
+	aliases: ['shipbit']
+};
